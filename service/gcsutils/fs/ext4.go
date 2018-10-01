@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"time"
 
 	"github.com/sirupsen/logrus"
 )
@@ -30,6 +31,9 @@ type Ext4Fs struct {
 func (e *Ext4Fs) InitSizeContext() error {
 	e.numInodes = 11                                                // ext4 has 11 reserved inodes
 	e.totalSize = maxU64(2048+e.numInodes*e.InodeSize, e.BlockSize) // boot sector + super block is 2k
+
+	logrus.Infof("InitSizeContext: %+v", e)
+
 	return nil
 }
 
@@ -44,6 +48,7 @@ func (e *Ext4Fs) CalcRegFileSize(fileName string, fileSize uint64) error {
 	// Each extent can hold 32k blocks, so 32M of data, so 128MB can get held
 	// in the 4 extends below the i_block.
 	e.totalSize += alignN(fileSize, e.BlockSize)
+	logrus.Infof("CalcRegFileSize: %+v %s %d", e, fileName, fileSize)
 	return nil
 }
 
@@ -54,6 +59,7 @@ func (e *Ext4Fs) CalcDirSize(dirName string) error {
 	// 1 inode with 2 directory entries ("." & ".." as data
 	e.addInode()
 	e.totalSize += 3 * e.BlockSize
+	logrus.Infof("CalcDirSize: %+v %s", e, dirName)
 	return nil
 }
 
@@ -65,6 +71,7 @@ func (e *Ext4Fs) CalcSymlinkSize(srcName string, dstName string) error {
 		// Not an inline symlink. The path is 1 extent max since MAX_PATH=4096
 		e.totalSize += alignN(uint64(len(dstName)), e.BlockSize)
 	}
+	logrus.Infof("CalcSynlinkSize: %+v %s %s", e, srcName, dstName)
 	return nil
 }
 
@@ -72,29 +79,34 @@ func (e *Ext4Fs) CalcSymlinkSize(srcName string, dstName string) error {
 func (e *Ext4Fs) CalcHardlinkSize(srcName string, dstName string) error {
 	// 1 directory entry (No additional inode)
 	e.totalSize += e.BlockSize
+	logrus.Infof("CalcHardlinkSize: %+v %s %s", e, srcName, dstName)
 	return nil
 }
 
 // CalcCharDeviceSize calculates the space taken by a char device.
 func (e *Ext4Fs) CalcCharDeviceSize(devName string, major uint64, minor uint64) error {
 	e.addInode()
+	logrus.Infof("CalcCharDeviceSize: %+v %s %d %d", e, devName, major, minor)
 	return nil
 }
 
 // CalcBlockDeviceSize calculates the space taken by a block device.
 func (e *Ext4Fs) CalcBlockDeviceSize(devName string, major uint64, minor uint64) error {
 	e.addInode()
+	logrus.Infof("CalcBlockDeviceSize: %+v %s %d %d", e, devName, major, minor)
 	return nil
 }
 
 // CalcFIFOPipeSize calculates the space taken by a fifo pipe.
 func (e *Ext4Fs) CalcFIFOPipeSize(pipeName string) error {
+	logrus.Infof("CalcFIFOPipeSize: %+v %s", e, pipeName)
 	e.addInode()
 	return nil
 }
 
 // CalcSocketSize calculates the space taken by a socket.
 func (e *Ext4Fs) CalcSocketSize(sockName string) error {
+	logrus.Infof("CalcSocketSize: %+v %s", e, sockName)
 	e.addInode()
 	return nil
 }
@@ -102,22 +114,26 @@ func (e *Ext4Fs) CalcSocketSize(sockName string) error {
 // CalcAddExAttrSize calculates the space taken by extended attributes.
 func (e *Ext4Fs) CalcAddExAttrSize(fileName string, attr string, data []byte, flags int) error {
 	// Since xattr are stored in the inode, we don't use any more space
+	logrus.Infof("CalcAddExAttrSize: %+v %s", e, fileName)
 	return nil
 }
 
 // FinalizeSizeContext should be after all of the CalcXSize methods are done.
 // It does some final size adjustments.
 func (e *Ext4Fs) FinalizeSizeContext() error {
+	logrus.Infof("FinalizeSizeContext Entry: %+v", e)
 	// Final adjustments to the size + inode
 	// There are more metadata like Inode Table, block table.
-	// For now, add 10% more to the size to take account for it.
-	e.totalSize = uint64(float64(e.totalSize) * 1.10)
-	e.numInodes = uint64(float64(e.numInodes) * 1.10)
+	// For now, add 15% more to the size to take account for it, and
+	// 10% more inodes. See https://github.com/moby/moby/issues/36353
+	e.totalSize = uint64(float64(e.totalSize) * 1.50)
+	e.numInodes = uint64(float64(e.numInodes) * 1.50)
 
 	// Align to 64 * blocksize
 	if e.totalSize%(64*e.BlockSize) != 0 {
 		e.totalSize = alignN(e.totalSize, 64*e.BlockSize)
 	}
+	logrus.Infof("FinalizeSizeContext Exit: %+v", e)
 	return nil
 }
 
@@ -150,7 +166,8 @@ func (e *Ext4Fs) MakeFileSystem(file *os.File) error {
 		file.Name()).Run()
 
 	if err != nil {
-		logrus.Infof("running mkfs.ext4 failed with ... (%s)", err)
+		logrus.Infof("running mkfs.ext4 %s failed with ... (%s)", file.Name(), err)
+		time.Sleep(100 * time.Hour)
 	}
 
 	return err
