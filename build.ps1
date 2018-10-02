@@ -1,11 +1,11 @@
 <#
 .NOTES
-    Summary: Simple wrapper to build a local initrd.img and rootfs.vhd from sources and optionally install it.
+    Summary: Simple wrapper to build a local initrd.img and rootfs.tar.gz from sources and optionally install it.
 
     License: See https://github.com/Microsoft/opengcs/blob/master/LICENSE
 
 .Parameter Install
-    Installs the built initrd.img and rootfs.vhd
+    Installs the built initrd.img
 
 #>
 
@@ -40,7 +40,8 @@ Try {
     # mounting for creating rootfs.vhd. --privileged would also be sufficient
     # but is not currently supported in LCOW.
     Write-Host -ForegroundColor Yellow "INFO: Compiling targets"
-    docker run --cap-add SYS_ADMIN --device-cgroup-rule="c 7:* rmw" --rm -v $d`:/build/out opengcs sh -c 'make -f $SRC/Makefile all out/rootfs.vhd'
+	# TODO: Temporarily removing out/rootfs.vhd target, as tar2vhd is removed. Need to replace with tar2ext4.
+    docker run --cap-add SYS_ADMIN --device-cgroup-rule="c 7:* rmw" --rm -v $d`:/build/out opengcs sh -c 'make -f $SRC/Makefile all'
     if ( $LastExitCode -ne 0 ) {
         Throw "failed to build"
     }

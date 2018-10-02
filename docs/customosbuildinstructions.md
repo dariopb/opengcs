@@ -53,7 +53,7 @@ Under the `/` directory, it should have the following subdirectories:
 
 Here are the expected contents of each subdirectory /file
 
-1. Subdirectories with **empty** contents:  `/tmp` `/proc` `/dev` `/run` `/etc` `/usr` `/mnt` `/sys`
+1. Subdirectories with **empty** contents:  `/tmp` `/proc` `/dev` `/run` `/etc` `/usr` `/mnt` `/sys`
 
 2. **/init**
    This is the [init script file](../kernel/scripts/init_script)
@@ -103,10 +103,9 @@ Here are the expected contents of each subdirectory /file
             /bin/gcstools
             /bin/netnscfg
             /bin/remotefs
-            /bin/tar2vhd
             /bin/vhd2tar
 
-            Note : exportSandbox, vhd2tar, tar2vhd, remotefs, and netnscfg are actually hard links to the "gcstools' file
+            Note : exportSandbox, vhd2tar, remotefs, and netnscfg are actually hard links to the "gcstools' file
 
     - Required binaires: utilities used by gcs
 
