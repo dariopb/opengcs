@@ -173,12 +173,6 @@ func (e *Ext4Fs) MakeFileSystem(file *os.File) error {
 	return err
 }
 
-// MakeBasicFileSystem just creates an empty file system on the given file using
-// the default settings.
-func (e *Ext4Fs) MakeBasicFileSystem(file *os.File) error {
-	return exec.Command("mkfs.ext4", "-F", file.Name()).Run()
-}
-
 func maxU64(x, y uint64) uint64 {
 	if x > y {
 		return x
